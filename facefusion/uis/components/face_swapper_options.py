@@ -1,3 +1,4 @@
+import gc
 from typing import List, Optional, Tuple
 
 import gradio
@@ -63,6 +64,13 @@ def remote_update(processors : List[str]) -> Tuple[gradio.Dropdown, gradio.Dropd
 def update_face_swapper_model(face_swapper_model : FaceSwapperModel) -> Tuple[gradio.Dropdown, gradio.Dropdown, gradio.Slider]:
 	face_swapper_module = load_processor_module('face_swapper')
 	face_swapper_module.clear_inference_pool()
+	gc.collect()
+	try:
+		import torch
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
+	except (ImportError, Exception):
+		pass
 	state_manager.set_item('face_swapper_model', face_swapper_model)
 
 	if face_swapper_module.pre_check():

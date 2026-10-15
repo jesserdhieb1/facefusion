@@ -17,6 +17,7 @@ def get_local_camera_capture(camera_id : int) -> cv2.VideoCapture:
 		camera_capture = cv2.VideoCapture(camera_id)
 
 		if camera_capture.isOpened():
+			camera_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 			CAMERA_POOL_SET['capture'][camera_key] = camera_capture
 
 	return CAMERA_POOL_SET.get('capture').get(camera_key)
@@ -27,6 +28,7 @@ def get_remote_camera_capture(camera_url : str) -> cv2.VideoCapture:
 		camera_capture = cv2.VideoCapture(camera_url)
 
 		if camera_capture.isOpened():
+			camera_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 			CAMERA_POOL_SET['capture'][camera_url] = camera_capture
 
 	return CAMERA_POOL_SET.get('capture').get(camera_url)

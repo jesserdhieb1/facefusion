@@ -7,36 +7,53 @@ from typing import Deque, Iterator, List
 import cv2
 from tqdm import tqdm
 
-from facefusion import ffmpeg_builder, logger, state_manager, translator
+from facefusion import face_store, ffmpeg_builder, logger, state_manager, translator
 from facefusion.audio import create_empty_audio_frame
 from facefusion.content_analyser import analyse_stream
 from facefusion.ffmpeg import open_ffmpeg
 from facefusion.filesystem import is_directory
 from facefusion.processors.core import get_processors_modules
 from facefusion.types import Fps, StreamMode, VisionFrame
-from facefusion.vision import extract_vision_mask, is_vision_frame, read_static_images
+from facefusion.vision import extract_vision_mask, is_vision_frame, read_static_image, read_static_images
 
 
 def multi_process_capture(camera_capture : cv2.VideoCapture, camera_fps : Fps) -> Iterator[VisionFrame]:
-	capture_deque : Deque[VisionFrame] = deque()
-	source_vision_frames = read_static_images(state_manager.get_item('source_paths'))
+	capture_deque : Deque[VisionFrame] = deque(maxlen = 1)
+	source_paths = state_manager.get_item('source_paths')
+	source_vision_frames = read_static_images(source_paths)
 
 	with tqdm(desc = translator.get('streaming'), unit = 'frame', disable = state_manager.get_item('log_level') in [ 'warn', 'error' ]) as progress:
 		with ThreadPoolExecutor(max_workers = state_manager.get_item('execution_thread_count')) as executor:
 			futures = []
 
 			while camera_capture and camera_capture.isOpened():
+				current_source_paths = state_manager.get_item('source_paths')
+				if current_source_paths != source_paths:
+					source_paths = current_source_paths
+					read_static_image.cache_clear()
+					face_store.clear_faces()
+					source_vision_frames = read_static_images(source_paths)
+
+				for future_done in [ future for future in futures if future.done() ]:
+					processed_frame = future_done.result()
+					capture_deque.append(processed_frame)
+					futures.remove(future_done)
+
+				while capture_deque:
+					progress.update()
+					yield capture_deque.popleft()
+
 				_, capture_vision_frame = camera_capture.read()
 				if analyse_stream(capture_vision_frame, camera_fps):
 					camera_capture.release()
 
-				if is_vision_frame(capture_vision_frame):
+				if is_vision_frame(capture_vision_frame) and len(futures) < 1:
 					future = executor.submit(process_stream_frame, source_vision_frames, capture_vision_frame)
 					futures.append(future)
 
 				for future_done in [ future for future in futures if future.done() ]:
-					capture_vision_frame = future_done.result()
-					capture_deque.append(capture_vision_frame)
+					processed_frame = future_done.result()
+					capture_deque.append(processed_frame)
 					futures.remove(future_done)
 
 				while capture_deque:

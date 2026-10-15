@@ -71,8 +71,18 @@ def clear_inference_pool(module_name : str, model_names : List[str]) -> None:
 	for execution_device_id in execution_device_ids:
 		inference_context = get_inference_context(module_name, model_names, execution_device_id, execution_providers)
 
-		if INFERENCE_POOL_SET.get(app_context).get(inference_context):
-			del INFERENCE_POOL_SET[app_context][inference_context]
+		for pool_context in INFERENCE_POOL_SET.values():
+			if inference_context in pool_context:
+				del pool_context[inference_context]
+
+	import gc
+	gc.collect()
+	try:
+		import torch
+		if torch.cuda.is_available():
+			torch.cuda.empty_cache()
+	except (ImportError, Exception):
+		pass
 
 
 def create_inference_session(model_path : str, inference_providers : List[InferenceProvider]) -> InferenceSession:

@@ -97,6 +97,7 @@ def start(webcam_device_id : int, webcam_mode : WebcamMode, webcam_resolution : 
 		camera_capture.set(cv2.CAP_PROP_FRAME_WIDTH, webcam_width)
 		camera_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, webcam_height)
 		camera_capture.set(cv2.CAP_PROP_FPS, webcam_fps)
+		camera_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
 		for capture_vision_frame in multi_process_capture(camera_capture, webcam_fps):
 			capture_vision_frame = cv2.cvtColor(capture_vision_frame, cv2.COLOR_BGR2RGB)
