@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  facefusion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: facefusion-service:latest
+    container_name: facefusion-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # REST API Service endpoint (consumed by external dashboard)
+      - "7861:7860"  # Optional Gradio Web UI (mapped to 7861 to avoid host port conflicts)
+    environment:
+      - DATA_DIR=/data
+      - EXECUTION_PROVIDERS=cuda
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount model assets so DFM and ONNX weights persist without re-downloading
+      - ./.assets:/facefusion/.assets:rw
+      # Shared data volume for zero-copy file passing with the dashboard
+      - ./data:/data:rw
+      # Live-mount service.py for instant updates without rebuilding
+      - ./service.py:/facefusion/service.py:rw
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

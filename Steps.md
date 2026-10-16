@@ -2,7 +2,7 @@ this tool requires the usage of anaconda, to run use this command on a an anacon
 
 conda activate facefusion
 
-cd "C:\Users\<username>\Documents\facefusion"
+cd "C:\Path\to\facefusion"
 
 (to open with the webcam)
 python facefusion.py run --ui-layouts webcam --video-memory-strategy strict
